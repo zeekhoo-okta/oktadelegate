@@ -18,6 +18,12 @@ const SSWS = process.env.SSWS
 const inline_hook_callback_client_id = process.env.INLINE_HOOK_CALLBACK_CLIENT_ID
 const inline_hook_callback_client_secret = process.env.INLINE_HOOK_CALLBACK_CLIENT_SECRET
 
+
+const redis_client = redis.createClient(6379, process.env.ELASTICACHE_CONNECT_STRING);
+redis_client.on("error", function (err) {
+    console.log("Error " + err);
+});
+
 const app = express();
 app.use(bodyParser.json());
 
@@ -127,11 +133,6 @@ function authenticationRequired(req, res, next) {
 		res.status(401).send(err.message);
 	});
 }
-
-const redis_client = redis.createClient();
-redis_client.on("error", function (err) {
-    console.log("Error " + err);
-});
 
 
 app.post('/delegate/init', authenticationRequired, (req, res) => {
