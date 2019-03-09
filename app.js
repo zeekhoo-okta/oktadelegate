@@ -7,7 +7,7 @@ const request = require('request');
 /**
  * Environment variables
  */
-require('dotenv').config();
+// require('dotenv').config();
 
 const base_url = process.env.BASE_URL
 const issuer = process.env.ISSUER
