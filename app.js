@@ -50,7 +50,7 @@ function callbackAuthRequired(req, res, next) {
 	}
 }
 
-app.get('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
+app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 	var sessionid = req.body.data.context.session.id;
 	var default_profile = req.body.data.context.user.profile;
 
