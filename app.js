@@ -66,7 +66,7 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 		var profile = await redis_get_promise(key);
 		var debug_statement = {};
 		if (profile) {
-			debug_statement = default_profile.firstName + ' ' + default_profile.lastName + ' is performing actions for ' + profile.firstName + ' ' + profile.lastName;
+			debug_statement = default_profile.firstName + ' ' + default_profile.lastName + ' is performing actions on-behalf-of ' + profile.firstName + ' ' + profile.lastName;
 		} else {
 			profile = default_profile;
 		}
@@ -85,7 +85,7 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 				}]
 			}],
 			"debugContext": {
-				"userDelegationEventLoggng": debug_statement
+				"userDelegationEventLogging": debug_statement
 			}
 		}
 		res.send(callback_response);
