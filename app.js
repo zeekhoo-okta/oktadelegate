@@ -7,16 +7,14 @@ const request = require('request');
 /**
  * Environment variables
  */
-// require('dotenv').config();
-
 const base_url = process.env.BASE_URL
 const issuer = process.env.ISSUER
 const client_id = process.env.CLIENT_ID
 const assert_aud = process.env.ASSERT_AUD
 const assert_scope = process.env.ASSERT_SCOPE
 const SSWS = process.env.SSWS
-const inline_hook_callback_client_id = process.env.INLINE_HOOK_CALLBACK_CLIENT_ID
-const inline_hook_callback_client_secret = process.env.INLINE_HOOK_CALLBACK_CLIENT_SECRET
+const client_username = process.env.CLIENT_USERNAME
+const client_password = process.env.CLIENT_PASSWORD
 
 
 const redis_client = redis.createClient(6379, process.env.ELASTICACHE_CONNECT_STRING);
@@ -41,7 +39,7 @@ function callbackAuthRequired(req, res, next) {
 	}
 
 	const credentials = match[1];
-	var auth = Buffer.from(inline_hook_callback_client_id + ':' + inline_hook_callback_client_secret).toString('base64');
+	var auth = Buffer.from(client_username + ':' + client_password).toString('base64');
 
 	if (credentials === auth) {
 		next();		
@@ -66,7 +64,10 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 
 	async function callback(key) {
 		var profile = await redis_get_promise(key);
-		if (!profile) {
+		var debug_statement = {};
+		if (profile) {
+			debug_statement = default_profile.firstName + ' ' + default_profile.lastName + ' is performing actions for ' + profile.firstName + ' ' + profile.lastName;
+		} else {
 			profile = default_profile;
 		}
 		var callback_response = {
@@ -82,7 +83,10 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 					"path": "/claims/user_context",
 					"value": profile
 				}]
-			}]
+			}],
+			"debugContext": {
+				"userDelegationEventLoggng": debug_statement
+			}
 		}
 		res.send(callback_response);
 	}
