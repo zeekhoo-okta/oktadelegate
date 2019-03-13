@@ -15,6 +15,7 @@ const assert_scope = process.env.ASSERT_SCOPE
 const SSWS = process.env.SSWS
 const client_username = process.env.CLIENT_USERNAME
 const client_password = process.env.CLIENT_PASSWORD
+const time_limit = process.env.TIME_LIMIT
 
 
 const redis_client = redis.createClient(6379, process.env.ELASTICACHE_CONNECT_STRING);
@@ -245,7 +246,8 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		}
 
 		// Auto expire the cache after 10 seconds
-		redis_client.set(sessionid, JSON.stringify(profile), 'EX', '10', redis.print);
+		var limit = time_limit || '60'
+		redis_client.set(sessionid, JSON.stringify(profile), 'EX', limit, redis.print);
 
 		res.send({
 			"status": status
