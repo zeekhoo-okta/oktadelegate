@@ -8,7 +8,7 @@ Follow these steps to deploy on AWS using Elastic Beanstalk. For simplicity, we 
 * **Make sure to deploy in the same VPC as the Elastic Beanstalk application**
 
 ### Elastic Beanstalk
-A Git archive of this project  `oktadelegate.zip` is included. Deploy this as a *single instance* (good enough for testing purposes. Read more about [Environment Types](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features-managing-env-types.html)) Elastic Beanstalk deployment:
+A source bundle of this project  `oktadelegate.zip` is included. Deploy this as a *single instance* (good enough for testing purposes. Read more about [Environment Types](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features-managing-env-types.html)) Elastic Beanstalk deployment:
 * From Elastic Beanstalk click [Create New Application]. Provide a name, e.g. oktadelegate and click [Create]
 * Click [Actions] > [Create Environment]
 * Choose "Web server environment" and click [Select]
@@ -31,7 +31,7 @@ After the environment is done building, add the following Environment Properties
 |<sub>SSWS</sub>|`00PEBvZk9M0F3ozG8EWXZnd_0xFQP__zXR`|<sub>Generate an API Key in Okta for calling the OKta Management APIs</sub>|
 |<sub>ELASTICACHE_CONNECT_STRING</sub>|`oktadelegate-redis.wtdkro.0001.usw2.cache.amazonaws.com`|<sub>The value of the Redis "Primary Endpoint"...exclude the port number. You can find this in the ElastiCache console</sub>|
 |<sub>CLIENT_USERNAME</sub>|`serviceaccountusername`|<sub>The /delegate/hook/callback endpoint is protected with Basic auth. *More about this below in the "Okta Setup" section*. Provide a username</sub>|
-|<sub>CLIENT_PASSWORD</sub>|`password123`|<sub>The /delegate/hook/callback endpoint is protected with Basic auth. *More about this below in the "Okta Setup" section*. Provide a password</sub>|
+|<sub>CLIENT_PASSWORD</sub>|`password123#`|<sub>The /delegate/hook/callback endpoint is protected with Basic auth. *More about this below in the "Okta Setup" section*. Provide a password</sub>|
 |<sub>TIME_LIMIT</sub>|`600`|<sub>The time allowed (in seconds) for a Proxy Login session, after which the app reverts back to the original user context</sub>|
 
 #### Configure Security Groups
@@ -57,7 +57,33 @@ Okta Inline Hooks requires https. A quick and easy way to serve the Elastic Bean
 * Deploy the API (you'll see the Public https url after you've successfully deployed)
 
 ### Okta Setup
+##### Activate Token Inline Hook
 Setup [Token Inline Hook](https://developer.okta.com/use_cases/inline_hooks/token_hook/token_hook) so that the access_tokens issued by Okta is patched with a callback we deployed in previous steps (i.e. the `/delegate/hook/callback` endpoint)
-* [Activate the Inline Hook](https://developer.okta.com/use_cases/inline_hooks/token_hook/token_hook#enabling-a-token-inline-hook) (Register the `/delegate/hook/callback` endpoint).
+* Register the `/delegate/hook/callback` endpoint using [API](https://developer.okta.com/docs/api/resources/inline-hooks#create-inline-hooks) (or use the Developer Console):
+    - Okta requires the hook callback implement an authentication mechanism, so **authScheme** is required (in this sample, we use Basic Auth to authenticate: *recall in the previous step, you were asked to input a CLIENT_USERNAME and CLIENT_PASSWORD as environment variables to the Elastic Beanstalk App*). Configure the Basic auth string:
+        + e.g.
+        ```
+        "authScheme" : {
+            "type": "HEADER",
+            "key": "Authorization",
+            "value": "Basic ${Base64(serviceaccountusername:password123#)}"
+        }
+        ```
+    - In this sample, we simply use Basic Auth but Okta also supports signed requests, which is more secure and recommended in a Production environment
+* [Activate the Inline Hook](https://developer.okta.com/use_cases/inline_hooks/token_hook/token_hook#enabling-a-token-inline-hook).
     - One of the rules defined in the Custom Authorization Server must be configured to trigger invocation of this hook:
         + Authorization Servers > Access Policies > Select the policy that will trigger the hook > Select or Add Rule > "Use this inline hook" = (select the activated hook)
+
+##### 
+##### Actor Setup
+* Make the Actor a Group Admin and assign the groups they can manage.
+    - If the Actor is not a Group Admin, `/delegate/init` will not succeed.
+    - If the Target is not in the Group the Actor manages, `/delegate/init` will not succeed
+    - If Actor does not manage any of the Groups the Target is member of, `/delegate/init` will not succeed
+
+
+##### API Access Management Setup
+* The `/delegate/init` endpoint is protected by asserting that an ASSERT_SCOPE (*you were asked to input this value as environment variables to the Elastic Beanstalk App*), `e.g. groupadmin` is present in the list of scopes the Actor is authorized to request. If the scope is not present in the access_token, `/delegate/init` will not succeed.
+    - Add the custom scope to your Authorization Server.
+    - Configure Access Policies to allow the Actor to request this scope.
+
