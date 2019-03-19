@@ -50,7 +50,8 @@ function callbackAuthRequired(req, res, next) {
 }
 
 app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
-	var sessionid = req.body.data.context.session.id;
+	// var sessionid = req.body.data.context.session.id;
+	var sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
 	var default_profile = req.body.data.context.user.profile;
 
 	function redis_get_promise(key) {
@@ -142,6 +143,7 @@ function authenticationRequired(req, res, next) {
 
 app.post('/delegate/init', authenticationRequired, (req, res) => {
 	var sessionid = req.jwt.claims.sessionid;
+
 	var delegation_target = req.body.delegation_target;
 
 	//The Bearer token to this api call contains a "uid" claim. This is the Okta userId
