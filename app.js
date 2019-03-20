@@ -52,27 +52,9 @@ function callbackAuthRequired(req, res, next) {
 app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 	/*
 	 * Determining the "session id"
-	 * Order of precedence:
-	 * 1) Use the refresh_token if refresh_token is in the request context. This happens when refresh token is being used
-	 * 2) Use session.id if it is in the request context. This happens when user reauthenticates silently from browser using prompt=none
-	 * 3) If neither is in the context, default to a made up value. For now use user.id + client.id
 	 */
-	var sessionid = 'none';
-	var originalGrant = req.body.data.context.protocol.originalGrant;
-	if (originalGrant) {
-		var refresh_token = originalGrant.refresh_token;
-		if (refresh_token) {
-			sessionid = refresh_token;
-		}
-	} else {
-		var session = req.body.data.context.session;
-		if (session) {
-			sessionid = session.id;
-		}
-	}
-	if (sessionid === 'none') {
-		sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
-	}
+	//var sessionid = req.body.data.context.session;
+	var sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
 
 	var default_profile = req.body.data.context.user.profile;
 
@@ -86,8 +68,19 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 		})
 	}
 
+	function redis_del_promise(key) {
+		return new Promise((resolve, reject) => {
+			redis_client.del(key, (error, result) => {
+				resolve(result);
+			})
+		})
+	}
+
 	async function callback(key) {
 		var profile = await redis_get_promise(key);
+		var del = await redis_del_promise(key);
+		console.log('del='+del);
+
 		var debug_statement = {};
 		if (profile) {
 			debug_statement = default_profile.firstName + ' ' + default_profile.lastName + ' is performing actions on-behalf-of ' + profile.firstName + ' ' + profile.lastName;
@@ -170,11 +163,6 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 
 	var sessionid = req.jwt.claims.sessionid;
 	
-	// If refresh token is provided, use as the sessionId
-	if (req.body.refresh_token) {
-		sessionid = req.body.refresh_token;
-	}
-
 	// The Bearer token to this api call contains a "uid" claim. This is the Okta userId
 	var admin_id = req.jwt.claims.uid;
 
@@ -277,7 +265,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		}
 
 		// Auto expire the cache
-		var limit = time_limit || '60'
+		var limit = time_limit || '10'
 		redis_client.set(sessionid, JSON.stringify(profile), 'EX', limit, redis.print);
 
 		res.send({

@@ -32,7 +32,6 @@ After the environment is done building, add the following Environment Properties
 |<sub>ELASTICACHE_CONNECT_STRING</sub>|`oktadelegate-redis.wtdkro.0001.usw2.cache.amazonaws.com`|<sub>The value of the Redis "Primary Endpoint"...exclude the port number. You can find this in the ElastiCache console</sub>|
 |<sub>CLIENT_USERNAME</sub>|`serviceaccountusername`|<sub>The /delegate/hook/callback endpoint is protected with Basic auth. *More about this below in the "Okta Setup" section*. Provide a username</sub>|
 |<sub>CLIENT_PASSWORD</sub>|`password123#`|<sub>The /delegate/hook/callback endpoint is protected with Basic auth. *More about this below in the "Okta Setup" section*. Provide a password</sub>|
-|<sub>TIME_LIMIT</sub>|`600`|<sub>The time allowed (in seconds) for a Proxy Login session, after which the app reverts back to the original user context</sub>|
 
 #### Configure Security Groups
 Update the ElastiCache's (Redis deployed in previous step) Security Group Inbound rules to allow the Elastic Beanstalk app to access `port 6379`
