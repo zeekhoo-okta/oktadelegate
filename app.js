@@ -58,7 +58,7 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 	 * 3) If neither is in the context, default to a made up value. For now use user.id + client.id
 	 */
 	var sessionid = 'none';
-	var originalGrant = req.body.data.context.originalGrant;
+	var originalGrant = req.body.data.context.protocol.originalGrant;
 	if (originalGrant) {
 		var refresh_token = originalGrant.refresh_token;
 		if (refresh_token) {
