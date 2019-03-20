@@ -50,8 +50,30 @@ function callbackAuthRequired(req, res, next) {
 }
 
 app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
-	// var sessionid = req.body.data.context.session.id;
-	var sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
+	/*
+	 * Determining the "session id"
+	 * Order of precedence:
+	 * 1) Use the refresh_token if refresh_token is in the request context. This happens when refresh token is being used
+	 * 2) Use session.id if it is in the request context. This happens when user reauthenticates silently from browser using prompt=none
+	 * 3) If neither is in the context, default to a made up value. For now use user.id + client.id
+	 */
+	var sessionid = 'none';
+	var originalGrant = req.body.data.context.originalGrant;
+	if (originalGrant) {
+		var refresh_token = originalGrant.refresh_token;
+		if (refresh_token) {
+			sessionid = refresh_token;
+		}
+	} else {
+		var session = req.body.data.context.session;
+		if (session) {
+			sessionid = session.id;
+		}
+	}
+	if (sessionid === 'none') {
+		sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
+	}
+
 	var default_profile = req.body.data.context.user.profile;
 
 	function redis_get_promise(key) {
@@ -142,11 +164,18 @@ function authenticationRequired(req, res, next) {
 
 
 app.post('/delegate/init', authenticationRequired, (req, res) => {
-	var sessionid = req.jwt.claims.sessionid;
-
 	var delegation_target = req.body.delegation_target;
+	if (!delegation_target)
+		res.status(400).send('Target is required');
 
-	//The Bearer token to this api call contains a "uid" claim. This is the Okta userId
+	var sessionid = req.jwt.claims.sessionid;
+	
+	// If refresh token is provided, use as the sessionId
+	if (req.body.refresh_token) {
+		sessionid = req.body.refresh_token;
+	}
+
+	// The Bearer token to this api call contains a "uid" claim. This is the Okta userId
 	var admin_id = req.jwt.claims.uid;
 
 	var headers = {
@@ -247,7 +276,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 			}
 		}
 
-		// Auto expire the cache after 10 seconds
+		// Auto expire the cache
 		var limit = time_limit || '60'
 		redis_client.set(sessionid, JSON.stringify(profile), 'EX', limit, redis.print);
 

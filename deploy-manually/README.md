@@ -46,9 +46,10 @@ Okta Inline Hooks requires https. A quick and easy way to serve the Elastic Bean
     - Provide API name, and Select Endpoint Type = Regional.
 * Create a "HTTP Proxy" resource 
     * From the Resources tab, choose Actions > Create Resource
-        * Resource Path = `{proxy+}`
-        * Enable API Gateway CORS = `Y`
-        * Click [Create Resource]
+        - Configure as proxy resource = Y
+        - Resource Path = `{proxy+}`
+        - Enable API Gateway CORS = `Y`
+        - Click [Create Resource]
 * Configure the resource Integration Request
     * Integration type = `HTTP Proxy`
     * Use HTTP Proxy integration = `Y`
