@@ -7,15 +7,15 @@ const request = require('request');
 /**
  * Environment variables
  */
-const base_url = process.env.BASE_URL
-const issuer = process.env.ISSUER
-const client_id = process.env.CLIENT_ID
-const assert_aud = process.env.ASSERT_AUD
-const assert_scope = process.env.ASSERT_SCOPE
-const SSWS = process.env.SSWS
-const client_username = process.env.CLIENT_USERNAME
-const client_password = process.env.CLIENT_PASSWORD
-const time_limit = process.env.TIME_LIMIT
+const base_url = process.env.BASE_URL || 'https://dev-123.oktapreview.com'
+const issuer = process.env.ISSUER || 'https://dev-123.oktapreview.com/oauth2/default'
+const client_id = process.env.CLIENT_ID || 'clientid'
+const assert_aud = process.env.ASSERT_AUD || 'api://default'
+const assert_scope = process.env.ASSERT_SCOPE || 'groupadmin'
+const SSWS = process.env.SSWS || 'sswskey'
+const client_username = process.env.CLIENT_USERNAME || 'username'
+const client_password = process.env.CLIENT_PASSWORD || 'password'
+const time_limit = process.env.TIME_LIMIT || '60'
 
 
 const redis_client = redis.createClient(6379, process.env.ELASTICACHE_CONNECT_STRING);
@@ -158,8 +158,11 @@ function authenticationRequired(req, res, next) {
 
 app.post('/delegate/init', authenticationRequired, (req, res) => {
 	var delegation_target = req.body.delegation_target;
-	if (!delegation_target)
+	if (!delegation_target) {
 		res.status(400).send('Target is required');
+	} else {
+		send_delegate_init_to_redis();
+	}
 
 	var sessionid = req.jwt.claims.sessionid;
 	
@@ -265,7 +268,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		}
 
 		// Auto expire the cache
-		var limit = time_limit || '10'
+		var limit = time_limit
 		redis_client.set(sessionid, JSON.stringify(profile), 'EX', limit, redis.print);
 
 		res.send({
@@ -273,7 +276,6 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		});
 	}
 
-	send_delegate_init_to_redis();
 });
 
 
