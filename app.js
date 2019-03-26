@@ -157,13 +157,6 @@ function authenticationRequired(req, res, next) {
 
 
 app.post('/delegate/init', authenticationRequired, (req, res) => {
-	var delegation_target = req.body.delegation_target;
-	if (!delegation_target) {
-		res.status(400).send('Target is required');
-	} else {
-		send_delegate_init_to_redis();
-	}
-
 	var sessionid = req.jwt.claims.sessionid;
 	
 	// The Bearer token to this api call contains a "uid" claim. This is the Okta userId
@@ -274,6 +267,13 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		res.send({
 			"status": status
 		});
+	}
+
+	var delegation_target = req.body.delegation_target;
+	if (!delegation_target) {
+		res.status(400).send('Target is required');
+	} else {
+		send_delegate_init_to_redis();
 	}
 
 });
