@@ -1,0 +1,12 @@
+{
+	"name": "oktadelegate",
+	"description": "Sample architecture on how to implement a "Proxy Login" function using Okta",
+	"url": "https://github.com/zeekhoo-okta/oktadelegate",
+	"categories": [
+		"authentication", 
+		"authorization",
+		"hooks", 
+		"apiAuthentication"
+	],
+	"logo": "https://developer.okta.com/logo.png"
+}
