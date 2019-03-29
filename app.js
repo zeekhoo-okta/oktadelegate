@@ -51,13 +51,17 @@ function callbackAuthRequired(req, res, next) {
 
 app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 	/*
-	 * Determining the "session id"
+	 * sessionid:
+	 * Use a value that uniquely identifies the transaction. context.session.id is the best choice 
+	 * but is not always present in the callback request (e.g. when refresh_token is used to get fresh access_token; because this is server side operation with no session)
+	 * context.session.id is always present when tokens are requested client-side (i.e. using /authorize endpoint)
 	 */
 	//var sessionid = req.body.data.context.session;
 	var sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
 
 	var default_profile = req.body.data.context.user.profile;
 
+	// redis "get" operation
 	function redis_get_promise(key) {
 		return new Promise((resolve, reject) => {
 			redis_client.get(key, (error, result) => {
@@ -68,6 +72,7 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 		})
 	}
 
+	// redis "del" operation
 	function redis_del_promise(key) {
 		return new Promise((resolve, reject) => {
 			redis_client.del(key, (error, result) => {
@@ -167,6 +172,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 	}
 
 
+	// get the target's group memberships
 	function groups_promise(target_id) {
 		return new Promise((resolve, reject) => {
 			var groups = [];
@@ -180,6 +186,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		}) 
 	}
 
+	// need the Actor's "Group Admin" roleId
 	function get_roleid_promise(admin_id) {
 		return new Promise((resolve, reject) => {
 			var role_id = null;
@@ -199,6 +206,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		})
 	}
 
+	// get all the groups the Actor manages
 	function user_admin_groups_promise(admin_id, role_id) {
 		var groups = [];
 		return new Promise((resolve, reject) => {
@@ -212,6 +220,7 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		})
 	}
 
+	// get user
 	function user_profile_promise(username) {
 		var users = null;
 		return new Promise((resolve, reject) => {
@@ -236,15 +245,15 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 		var status = 'NOT FOUND';
 		var profile = null;
 		var role_id = await get_roleid_promise(admin_id);
-		//Must be a user admin (group admin)
+		// Must be a user admin (group admin)
 		if (role_id) {
 			//List of groups the group admin can manage
 			var admins_groups = await user_admin_groups_promise(admin_id, role_id);
 
-			//Get the target's user id and profile info
+			// Get the target's user id and profile info
 			var delegation_target_obj = await user_profile_promise(delegation_target);
 			if (delegation_target_obj) {
-				//List of groups the target is member of
+				// List of groups the target is member of
 				var users_groups = await groups_promise(delegation_target_obj.id);
 				var admins_groups_ids = [];
 				for(var i=0; i<admins_groups.length; i++){
