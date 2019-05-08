@@ -243,13 +243,11 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 
 	async function send_delegate_init_to_redis() {
 		var status = 'NOT FOUND';
-		var profile = null;
 		var role_id = await get_roleid_promise(admin_id);
 		// Must be a user admin (group admin)
 		if (role_id) {
 			//List of groups the group admin can manage
 			var admins_groups = await user_admin_groups_promise(admin_id, role_id);
-
 			// Get the target's user id and profile info
 			var delegation_target_obj = await user_profile_promise(delegation_target);
 			if (delegation_target_obj) {
@@ -262,16 +260,20 @@ app.post('/delegate/init', authenticationRequired, (req, res) => {
 				for(var i=0; i<users_groups.length; i++){
 					if (admins_groups_ids.includes(users_groups[i].id)) {
 						status = 'SUCCESS';
-						profile = delegation_target_obj.profile;
+						var full_profile = delegation_target_obj.profile;
+						var profile_group_names = [];
+						for(var i=0; i<users_groups.length; i++){
+							profile_group_names.push(users_groups[i].profile.name);
+						}
+						full_profile.groups = profile_group_names;
+
+						var limit = time_limit // Auto expire the cache
+						redis_client.set(sessionid, JSON.stringify(full_profile), 'EX', limit, redis.print);
 						break;
 					}
 				}
 			}
 		}
-
-		// Auto expire the cache
-		var limit = time_limit
-		redis_client.set(sessionid, JSON.stringify(profile), 'EX', limit, redis.print);
 
 		res.send({
 			"status": status
