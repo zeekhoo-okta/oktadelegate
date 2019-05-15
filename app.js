@@ -16,7 +16,7 @@ const SSWS = process.env.SSWS || 'sswskey'
 const client_username = process.env.CLIENT_USERNAME || 'username'
 const client_password = process.env.CLIENT_PASSWORD || 'password'
 const time_limit = process.env.TIME_LIMIT || '60'
-
+var external_verification = process.env.USE_GATEWAY_JWT_VERIFICATION || 0
 
 const redis_client = redis.createClient(6379, process.env.ELASTICACHE_CONNECT_STRING);
 redis_client.on("error", function (err) {
@@ -25,7 +25,12 @@ redis_client.on("error", function (err) {
 
 const app = express();
 app.use(bodyParser.json());
-
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+  next();
+});
 
 /*
  * Do a Basic Auth check on the callback
@@ -57,7 +62,7 @@ app.post('/delegate/hook/callback', callbackAuthRequired, (req, res) => {
 	 * context.session.id is always present when tokens are requested client-side (i.e. using /authorize endpoint)
 	 */
 	//var sessionid = req.body.data.context.session;
-	var sessionid = req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
+	var sessionid = req.body.data.context.protocol.issuer.uri + '-' + req.body.data.context.user.id + '-' + req.body.data.context.protocol.client.id;
 
 	var default_profile = req.body.data.context.user.profile;
 
@@ -125,6 +130,15 @@ const oktaJwtVerifier = new OktaJwtVerifier({
   },
 });
 
+
+var atob = require('atob');
+
+// Unvalidated payload.
+function dirtyJwtPayload(accessToken) {
+	var decoded = atob(accessToken.split('.')[1]);	
+	return JSON.parse(decoded);
+}
+
 /**
  * A simple middleware that asserts valid access tokens and sends 401 responses
  * if the token is not present or fails validation.  If the token is valid its
@@ -140,24 +154,30 @@ function authenticationRequired(req, res, next) {
 
 	const accessToken = match[1];
 
-	return oktaJwtVerifier.verifyAccessToken(accessToken)
-	.then((jwt) => {
-		req.jwt = jwt;
-
-		var scopes = req.jwt.claims.scp; 
-		if (!scopes.includes(assert_scope)) {
-			res.status(401).send('Not authorized to delegate');
-		}
-		var sessionid = req.jwt.claims.sessionid;
-		if (!sessionid) {
-			res.status(401).send('Invalid session');	
-		}
-
+	if (external_verification == true) {
+		// Don't actually use oktaJwtVerifier. Assume an API Gateway has verified the access_token
+		req.jwt = {"header": {}, "claims": dirtyJwtPayload(accessToken)};
 		next();
-	})
-	.catch((err) => {
-		res.status(401).send(err.message);
-	});
+	} else {
+		return oktaJwtVerifier.verifyAccessToken(accessToken)
+		.then((jwt) => {
+			req.jwt = jwt;
+
+			var scopes = req.jwt.claims.scp; 
+			if (!scopes.includes(assert_scope)) {
+				res.status(401).send('Not authorized to delegate');
+			}
+			var sessionid = req.jwt.claims.sessionid;
+			if (!sessionid) {
+				res.status(401).send('Invalid session');	
+			}
+
+			next();
+		})
+		.catch((err) => {
+			res.status(401).send(err.message);
+		});
+	}
 }
 
 
