@@ -11,11 +11,9 @@
   "author": "zeekhoo",
   "license": "ISC",
   "dependencies": {
-    "@okta/jwt-verifier": "0.0.14",
-    "atob": "^2.1.2",
+    "@okta/jwt-verifier": "0.0.15",
     "express": "^4.16.4",
     "http": "0.0.0",
-    "jsonwebtoken": "^8.5.1",
     "redis": "^2.8.0",
     "request": "^2.88.0"
   }
