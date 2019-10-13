@@ -1,6 +1,6 @@
 {
 	"name": "proxylogin-delegation-impersonation-reference",
-	"description": "Sample architecture on how to implement a "Proxy Login" function using Okta",
+	"description": "Sample architecture on how to implement a 'Proxy Login' function using Okta",
 	"url": "https://github.com/zeekhoo-okta/oktadelegate",
 	"categories": [
 		"authentication", 
